@@ -2,12 +2,13 @@ import os
 from flask import Flask
 from flask import render_template
 from flask import jsonify
+from flask import request
 from helpers.tube import line_status, station_open
 from helpers.metoffice import get_forcast
 app = Flask(__name__)
 app.debug = True
 
-def get_value():
+def get_value(station, line):
     result = 100
 
     forcast =  get_forcast()
@@ -15,7 +16,7 @@ def get_value():
     print "Feels Like Temperature: %s" % forcast['Feels Like Temperature']
     print "Weather Type: %s" % forcast['Weather Type']
     print "Wind Speed: %s" % forcast['Wind Speed']
-    print "Line status: %s" % line_status('Victoria')
+    print "Line status: %s" % line_status(line)
 
     #0 remove points for cold
     if int(forcast['Feels Like Temperature']) <= 15 and int(forcast['Feels Like Temperature']) > 5:
@@ -58,12 +59,12 @@ def get_value():
         result = result - 35
 
     #3)  add points for cycling based on status of line
-    if line_status('Victoria') != 'Good Service':
+    if line_status(line) != 'Good Service':
         print "Adding 35 points tube line not running well"
         result = result + 35
 
     #4) if station shut, need to get on a bike whatever the weather
-    if not station_open('Brixton'):
+    if not station_open(station):
         print "Forced 100 as station is shut"
         result = 100
 
@@ -77,18 +78,21 @@ def get_value():
 
 @app.route("/")
 def index():
-    value = 100 - get_value()
+    station = request.args.get('station') or "Brixton"
+    line = request.args.get('line') or "Victoria"
+    value = 100 - get_value(station, line)
     return render_template('index.html', value=value)
 
 @app.route("/api")
 @app.route("/api<path:format>")
 def api(format = ""):
-    value = get_value()
+    station = request.args.get('station') or "Brixton"
+    line = request.args.get('line') or "Victoria"
+    value = get_value(station, line)
     if format == ".json":
       return jsonify(value=value)
     else:
       return render_template('api.html', value=value)
-
 
 if __name__ == '__main__':
     # Bind to PORT if defined, otherwise default to 5000.
