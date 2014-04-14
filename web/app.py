@@ -82,7 +82,7 @@ def index():
 
 @app.route("/api")
 @app.route("/api<path:format>")
-def api():
+def api(format = ""):
     value = get_value()
     if format == ".json":
       return jsonify(value=value)
